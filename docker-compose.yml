@@ -1,0 +1,56 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: pass
+    networks:
+      - etsy_net
+
+  api:
+    build: ./api
+    volumes:
+      - ./api:/app 
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - etsy_net
+
+  client:
+    build:
+      context: ./client
+      target: dev
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    command: ["npm", "run", "dev", "--", "--host"]
+    networks:
+      - etsy_net
+
+  selenium_worker:
+    build: 
+      context: ./Workers
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+    networks:
+      - etsy_net
+  
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - etsy_net
+
+networks:
+  etsy_net:
