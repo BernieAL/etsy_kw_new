@@ -1,196 +1,152 @@
-import pika,redis,json,time,os
+import pika
+import redis
+import json
+import time
+import os
 from datetime import datetime
 from common.logger import get_logger
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import file_operations #class for file operations (dir creation,file creation)
+# class for file operations (dir creation,file creation)
+import file_operations
+
+
+# env var path to output dir - same place for all reports
+ROOT_REPORT_OUTPUT_DIR = "path/to/report-output-dir"
 
 logger = get_logger("scraper_worker")
 
-# redis setup
-r = redis.Redis(host='redis', port=6379, decode_responses=True)
 
-# rbmq setup
-connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-channel = connection.channel()
-channel.queue_declare(queue='scrape')
+class ScrapeWorker:
+    def __init__(self, job: dict):
+        self.job = job
+        self.job_id = job.get("job_id")
+        self.user_id = job.get("user_id")
+        self.date = job.get("date", datetime.now().strftime('%Y-%m-%d'))
+        self.urls = job.get("urls", [])
+        self.driver = None
+        self.all_url_data = []
+        self.report_builder = file_operations.ReportPathBuilder(
+            ROOT_REPORT_OUTPUT_DIR)
 
-def log_status(job_id,status_msg):
+    def log_status(self, status):
+        key = f"job:{self.job_id}"
+        r.set(key, status)
+        logger.info(f"[{self.job_id}] STATUS: {status}")
 
-    """updates job status in redis for current job
-    """
-    key = f"job:{job_id}"
-    r.set(key,status_msg)
-    print(f"[{job_id}] STATUS: {status_msg}")
-    logger.info(f"[{job_id}] STATUS: {status_msg}")
-
-
-
-"""
-we should have seperate scrape functions
-depending on what we are retrieving or scraping
-
-the primary focus is to get tags and related searches for a given listing url
-
-if we have data in format of  {
-        url: 'etsy123/',
-        tags: []
-        related_searches: []
-    }
-
-first off scraping the data:
-    data.tags.append(tag)
-    data.related_searches.append(term)
-
-writing to csv
-    line = f"{url},{tags},{related_searches}"
-
-"""
-def scrape_tags():
-
-    """
-        this function will be for targeting tag elements on etsy product page
-        for a single URL, and scraping these only, and putting into a list
-
-        will be called once for each URL
-
-        return list of scraped tags on page
-
-         all DOM location logic for tags is here
-
-         failure of this isolated to this process only
-    """
-
-    """
-         log entry to this process
-        try     
-            locate related tag elements on page
-            if found:
-                put in list, return success msg, and populated list
-                log if found
-            if not found: 
-                throw exception or return fail
-                log if not found
-        except
-            throw exception if there was an error like element not foud
-    
-    
-    """
-
-def scrape_related_search_terms():
-
-
-    """
-        this function is for targeting releated search term elements on etsy product page for a single URL, and scraping these only, and putting into a list
-
-        will be called once for each URL
-
-        returns list of scraped terms on page
-
-        all DOM location logic for related_search_terms is here
-
-        failure of this isolated to this process only
-    """
-
-    """
-        log entry to this process
-        try     
-            locate realted ssearch term elements on page
-            if found:
-                put in list, return success msg, and populated list
-                log if found
-            if not found: 
-                throw exception or return fail
-                log if not found
-        except
-            throw exception if there was an error like element not foud
-    
-    """
-
-def handle_scrape(job):
-
-
-    job_id = job.get("job_id")
-    urls = job.get("urls",[])
-    
-    log_status(job_id,"recieved: job picked up by worker")
-
-    # Mock scrape step
-    log_status(job_id, "scraping")
-    try:
-       
-
+    def setup_driver(self):
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        self.driver = webdriver.Chrome(options=options)
 
-        driver = webdriver.Chrome(options=options)
+    def scrape(self):
 
-        scraped_data = [
-            {
-                'url':None,
-                'tags':[],
-                'related_search_terms':[]
-            }
-        ]
-       
+        # for each url, use self.driver to collect tags + terms
+        # append to self.all_url_data
+        pass
 
-        for url in urls:
-
-            driver.get(url)
-            time.sleep(4)
+    def scrape_tags(self) -> list:
+        """
+        Locate and return tag elements from the current page using self.driver
 
 
-            tags = scrape_tags(driver)
-            search_terms = scrape_related_search_terms(driver)
+            this function will be for targeting tag elements on etsy product page
+            for a single URL, and scraping these only, and putting into a list
 
-            
+            will be called once for each URL
 
+            return list of scraped tags on page
 
+            all DOM location logic for tags is here
 
-            # print(f"[{job_id}] Scraped {url} - Title: {driver.title}")
-            # logger.info(f"[job:{job_id}] SCRAPE - Title: {title}")
-            
+            failure of this isolated to this process only
+        """
 
-        driver.quit()
-    except Exception as e:
-        log_status(job_id, f"error during scraping: {str(e)}")
-        return
-
-    # Report generation step
-    log_status(job_id, "generating_report")
-    try:
-        os.makedirs("reports", exist_ok=True)
-        filename = f"reports/report-{job_id}.csv"
-        with open(filename, "w") as f:
-            f.write("url,title\n")
-            for row in scraped_data:
-                f.write(f"{row['url']},{row['title']}\n")
-        print(f"[{job_id}] Report written to {filename}")
-    except Exception as e:
-        log_status(job_id, f"error during report generation: {str(e)}")
-        return
-
-    # Mock email step
-    log_status(job_id, "emailing")
-    time.sleep(2)  # Placeholder
-
-    log_status(job_id, "done")
-    print(f"[{job_id}] Job complete!")
-    logger.info(f"[job:{job_id}] Job completed")
+        """
+            log entry to this process
+            try
+                locate related tag elements on page
+                if found:
+                    put in list, return success msg, and populated list
+                    log if found
+                if not found:
+                    throw exception or return fail
+                    log if not found
+            except
+                throw exception if there was an error like element not foud
 
 
+        """
+        tags = []
+        try:
+            # your tag scraping logic using self.driver
+            # tags = [e.text for e in self.driver.find_elements(...)]
+            logger.info(f"[{self.job_id}] Tags scraped: {tags}")
+        except Exception as e:
+            logger.warning(f"[{self.job_id}] Failed to scrape tags: {e}")
+        return tags
 
-def callback(ch, method, properties, body):
-    try:
-        job = json.loads(body)
-        job_id = job.get("job_id", "UNKNOWN")
-        logger.info(f"[job:{job_id}] Received job from queue")
-        handle_scrape(job)
-    except Exception as e:
-        logger.exception("Error handling job")
+    def scrape_related_search_terms(self) -> list:
+        """
 
-logger.info("🟢 Worker started. Waiting for jobs...")
-channel.basic_consume(queue='scrape', on_message_callback=callback, auto_ack=True)
-channel.start_consuming()
+            Locate and return related search term elements from the current page using self.driver
+
+            this function is for targeting releated search term elements on etsy product page for a single URL, and scraping these only, and putting into a list
+
+            will be called once for each URL
+
+            returns list of scraped terms on page
+
+            all DOM location logic for related_search_terms is here
+
+            failure of this isolated to this process only
+        
+        """   
+        """   
+            log entry to this process
+            try     
+                locate realted ssearch term elements on page
+                if found:
+                    put in list, return success msg, and populated list
+                    log if found
+                if not found: 
+                    throw exception or return fail
+                    log if not found
+            except
+                throw exception if there was an error like element not foud
+        
+        """
+    
+        terms = []
+        try:
+            # terms = [e.text for e in self.driver.find_elements(...)]
+            logger.info(f"[{self.job_id}] Related terms scraped: {terms}")
+        except Exception as e:
+            logger.warning(f"[{self.job_id}] Failed to scrape related terms: {e}")
+        return terms
+    def generate_report(self):
+        self.report_builder.make_user_subdir(self.user_id)
+        self.report_builder.make_date_subdir(self.date)
+        self.report_builder.make_report_file(self.job_id)
+        self.report_builder.write_file_formatted(self.all_url_data)
+
+    def run(self):
+        try:
+            self.log_status("starting")
+            self.setup_driver()
+            self.log_status("scraping")
+            self.scrape()
+            self.driver.quit()
+
+            self.log_status("generating_report")
+            self.generate_report()
+
+            self.log_status("emailing")
+            time.sleep(2)
+
+            self.log_status("done")
+        except Exception as e:
+            self.log_status(f"error: {e}")
+            logger.exception(f"[{self.job_id}] Job failed")

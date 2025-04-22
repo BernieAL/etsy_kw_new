@@ -41,6 +41,25 @@ class ReportPathBuilder:
 
         self.curr_output_filepath = None
 
+    def make_root_output_dir(self,ROOT_REPORT_OUTPUT_DIR):
+
+        """
+        Makes output dir if it doesn't exist already.
+        """
+        root_output_dir_path = Path(ROOT_REPORT_OUTPUT_DIR)
+        
+        ROOT_REPORT_OUTPUT_DIR = os.getenv("ROOT_REPORT_OUTPUT_DIR")
+        if not ROOT_REPORT_OUTPUT_DIR:
+            raise EnvironmentError("ROOT_REPORT_OUTPUT_DIR environment variable not set.")
+        
+        root_dir_path = Path(ROOT_REPORT_OUTPUT_DIR)
+        root_dir_path.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"Created root path: {self.root_path}")
+
+        return self.root_path
+        
+
     def make_user_subdir(self,user_id):
 
         """
@@ -127,15 +146,3 @@ class ReportPathBuilder:
 
 
     
-def make_output_dir(ROOT_REPORT_OUTPUT_DIR):
-
-    """
-    Makes output dir if it doesn't exist already.
-    """
-    root_output_dir_path = Path(ROOT_REPORT_OUTPUT_DIR)
-    
-    if not root_output_dir_path.is_dir():
-        root_output_dir_path.mkdir(exist_ok=True)
-        logger.info(f"Created root_report_output_dir at {root_output_dir_path}")
-    else:
-        logger.info(f"EXISTS: root_report_output_dir at {root_output_dir_path}")
