@@ -1,63 +1,91 @@
-from flask import Flask,request,jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import csv,os,pika,json,redis,uuid
+import os, json, pika, redis, uuid
 
-
-r = redis.Redis(host='redis', port=6379, decode_responses=True)
+from common.logger import get_logger
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
 CORS(app)
 
-@app.route('/health',methods=['GET'])
+r = redis.Redis(host='redis', port=6379, decode_responses=True)
+logger = get_logger("api")
+
+@app.route('/health', methods=['GET'])
 def health_check():
+    logger.info("[HEALTH] Health check pinged")
+    return jsonify({'health': 'OK'}), 200
 
-    return jsonify({'health': 'OK'},200)
 
+@app.route('/api/report/<job_id>',methods=['GET'])
+def download_report(job_id):
 
-# @app.route('/api/scrape',methods=['POST'])
-# def scrape():
-#     data = request.get('urls',[])
-#     urls = data.get('urls',[])
-
-@app.route('/api/push_to_queue',methods=['POST'])
-def scrape():
-    data = request.get_json()  
-    urls = data.get('urls', [])
-
-    #generate id for this job
-    job_id = str(uuid.uuid4())
-
-    #set initial job status for this job in redis
-    r.set(f"Job:{job_id}","queued")
-
-    # Attach job_id to data payload
-    data['job_id'] = job_id
-
-    #push job to queue - selenium worker will pull
-    """payload looks like:
-        {
-            "urls": ["https://google.com", "https://weather.com"],
-            "email": "user@example.com",
-            "job_id": "a1b2c3d4"
-        }
+    """
+    serves file from backend as a downloadthe wa
     
     """
-    connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-    channel = connection.channel()
-    channel.queue_declare(queue='scrape')
-    channel.basic_publish(
-       exchange='', 
-       routing_key='scrape', 
-       body=json.dumps(data)
-    )
+    filename = f"report-{job_id}.csv"
+    directory = "reports"
 
-    connection.close()
+    filepath = os.path.join(directory,filename)
+    if os.path.exists(filepath):
+        logger.info(f"[job:{job_id}] API - report download triggered")    
+        return send_from_directory(directory,filename, as_attachment=True)
 
-    return jsonify({
-        "status": "Job queued. Report will be emailed.",
-        "job_id": job_id
-    })
+    logger.warning(f"[job:{job_id}] API - Report not found")
+    
+    return jsonify({"error": "Report not ready or does not exist."}), 404
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/api/status/<job_id>', methods=['GET'])
+def check_status(job_id):
+
+    """
+        tells frontend what stage job is in 
+        frontend will call this repeatedly to check job status
+    
+    """
+    status = r.get(f"job:{job_id}")
+    result = {"job_id": job_id, "status": status or "unknown"}
+
+    report_path = f"reports/report-{job_id}.csv"
+    if status == "done" and os.path.exists(report_path):
+        result["download_url"] = f"/api/report/{job_id}"
+
+    logger.info(f"[job:{job_id}] API - Status check: {status or 'unknown'}")
+    return jsonify(result)
+
+
+@app.route('/api/push_to_queue', methods=['POST'])
+def push_to_queue():
+    try:
+        data = request.get_json()
+        urls = data.get('urls', [])
+        email = data.get('email', 'nobody@example.com')
+
+        job_id = str(uuid.uuid4())
+        data['job_id'] = job_id
+
+        logger.info(f"[job:{job_id}] API - Received job submission")
+        logger.info(f"[job:{job_id}] API - URLs: {urls}")
+
+        # Store initial status in Redis
+        r.set(f"job:{job_id}", "queued")
+
+        # Push job to RabbitMQ
+        connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
+        channel = connection.channel()
+        channel.queue_declare(queue='scrape')
+
+        channel.basic_publish(
+            exchange='',
+            routing_key='scrape',
+            body=json.dumps(data)
+        )
+        connection.close()
+
+        logger.info(f"[job:{job_id}] API - Job pushed to queue successfully")
+        return jsonify({"status": "Job queued. Report will be emailed.", "job_id": job_id}), 200
+
+    except Exception as e:
+        logger.exception("[API] Error pushing job to queue")
+        return jsonify({"error": str(e)}), 500
