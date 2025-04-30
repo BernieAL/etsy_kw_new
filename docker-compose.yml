@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -9,15 +11,80 @@ services:
       RABBITMQ_DEFAULT_PASS: pass
     networks:
       - etsy_net
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - etsy_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   api:
-    build: ./api
+    build:
+      context: ./src
+      dockerfile: api/Dockerfile.api
     volumes:
-      - ./api:/app 
+      - ./src/api:/app
+      - ./src/common:/app/common
     ports:
       - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - etsy_net
+
+  scraper_worker:
+    build:
+      context: ./src
+      dockerfile: workers/scraper_worker/Dockerfile.scraper_worker
+    volumes:
+      - ./src/workers:/app/workers
+      - ./src/common:/app/common
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - etsy_net
+
+  email_worker:
+    build:
+      context: ./src
+      dockerfile: workers/email_worker/Dockerfile.email_worker
+    volumes:
+      - ./src/workers:/app/workers
+      - ./src/common:/app/common
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
+    command: ["python", "-m", "workers.email_worker.email_worker"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - etsy_net
 
@@ -36,21 +103,6 @@ services:
     networks:
       - etsy_net
 
-  selenium_worker:
-    build: 
-      context: ./Workers
-      dockerfile: Dockerfile
-    depends_on:
-      - rabbitmq
-    networks:
-      - etsy_net
-  
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - etsy_net
-
 networks:
   etsy_net:
+    driver: bridge 

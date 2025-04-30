@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+# Set workdir
+WORKDIR /app
+
+# Install dependencies
+COPY api/requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copy the common and api code
+COPY common /app/common
+COPY . /app/api
+
+# Create __init__.py files if they don't exist
+RUN touch /app/common/__init__.py \
+    && touch /app/api/__init__.py
+
+# Set Python path to include the app directory
+ENV PYTHONPATH=/app
+
+# Set environment variables for Flask
+ENV FLASK_APP=api.app
+ENV FLASK_ENV=development
+
+# Default command uses Flask reloader
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000", "--reload"]

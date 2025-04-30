@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY workers/email_worker/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the common and workers code
+COPY common /app/common
+COPY workers /app/workers
+
+# Create __init__.py files if they don't exist
+RUN touch /app/workers/__init__.py \
+    && touch /app/workers/email_worker/__init__.py
+
+# Set Python path to include the app directory
+ENV PYTHONPATH=/app
+
+# Run the worker
+CMD ["python", "-m", "workers.email_worker.email_worker"]
