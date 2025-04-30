@@ -11,6 +11,27 @@ CORS(app)
 r = redis.Redis(host='redis', port=6379, decode_responses=True)
 logger = get_logger("api")
 
+
+
+# RabbitMQ connection parameters
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', '5672'))
+RABBITMQ_USER = os.getenv('RABBITMQ_DEFAULT_USER', 'user')
+RABBITMQ_PASS = os.getenv('RABBITMQ_DEFAULT_PASS', 'pass')
+RABBITMQ_VHOST = os.getenv('RABBITMQ_VHOST', '/')
+
+def get_rabbitmq_connection():
+    """Create and return a RabbitMQ connection with credentials"""
+    credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+    parameters = pika.ConnectionParameters(
+        host=RABBITMQ_HOST,
+        port=RABBITMQ_PORT,
+        virtual_host=RABBITMQ_VHOST,
+        credentials=credentials
+    )
+    return pika.BlockingConnection(parameters)
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     logger.info("[HEALTH] Health check pinged")
@@ -72,7 +93,7 @@ def push_to_queue():
         r.set(f"job:{job_id}", "queued")
 
         # Push job to RabbitMQ
-        connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
+        connection = get_rabbitmq_connection()
         channel = connection.channel()
         channel.queue_declare(queue='scrape')
 
@@ -89,3 +110,4 @@ def push_to_queue():
     except Exception as e:
         logger.exception("[API] Error pushing job to queue")
         return jsonify({"error": str(e)}), 500
+
