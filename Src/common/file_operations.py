@@ -133,5 +133,7 @@ class ReportPathBuilder:
                 tags = '; '.join(item.get('tags', []))
                 search_terms = '; '.join(item.get('search_terms', []))
                 writer.writerow([url, tags, search_terms])
-        
+    
+        # return self.curr_output_filepath
+    
         logger.info(f"Wrote data to report file: {self.curr_output_filepath}") 

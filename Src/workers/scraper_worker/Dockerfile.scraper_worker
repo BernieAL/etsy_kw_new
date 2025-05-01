@@ -11,24 +11,29 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+# Chrome-specific environment variables
+ENV CHROME_BIN=/usr/bin/google-chrome-stable
+ENV CHROME_PATH=/usr/lib/chromium/
+ENV CHROME_DRIVER_PATH=/usr/local/bin/chromedriver
+ENV DISPLAY=:99
+ENV RUNNING_IN_DOCKER=1
+
+# Install Chrome and dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    gnupg \
+    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update \
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome WebDriver
-RUN CHROME_DRIVER_VERSION=`curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE` \
-    && wget -q -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
-    && unzip /tmp/chromedriver.zip -d /usr/local/bin/ \
-    && rm /tmp/chromedriver.zip \
-    && chmod +x /usr/local/bin/chromedriver
-
 # Copy requirements first for better caching
 COPY workers/scraper_worker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install "watchdog[watchmedo]"
+    && pip install "watchdog[watchmedo]" \
+    && pip install webdriver-manager==4.0.1
 
 # Copy the common and workers code
 COPY common /app/common
