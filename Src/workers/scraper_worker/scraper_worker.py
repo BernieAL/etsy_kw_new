@@ -16,7 +16,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import ElementNotVisibleException, StaleElementReferenceException
 from selenium.common.exceptions import NoSuchElementException,TimeoutException
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.proxy import Proxy, ProxyType
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv,find_dotenv
 
@@ -28,7 +27,7 @@ sys.path.append(parent_dir)
 
 
 # env var path to output dir - same place for all reports
-ROOT_REPORT_OUTPUT_DIR = "path/to/report-output-dir"
+ROOT_REPORT_OUTPUT_DIR = os.getenv('ROOT_REPORT_OUTPUT_DIR', '/app/reports')
 
 logger = get_logger("scraper_worker")
 r = redis.Redis(host='redis', port=6379, decode_responses=True)
@@ -287,7 +286,7 @@ class ScrapeWorker():
         logger.info(f"[job:{self.job_id}] Email sent to queue")
 
 
-    def preview_report_contents(self.report_file_path):
+    def preview_report_contents(self, report_file_path):
         file = self.report_filepath
 
         with open(file,'r') as csvfile:
@@ -341,7 +340,7 @@ def process_msg(ch,method,properties,body):
         worker.generate_report()
         
         
-        worker.preview_report(worker.report_filepath)
+        worker.preview_report_contents(worker.report_filepath)
         
         worker.push_to_email_queue()
 

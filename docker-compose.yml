@@ -3,19 +3,23 @@ version: '3.8'
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: pass
-    networks:
-      - etsy_net
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
+      - RABBITMQ_LOGS=error  # Only show error logs
+      - RABBITMQ_LOG_LEVEL=error  # Set log level to error
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - etsy_net
 
   redis:
     image: redis:alpine
@@ -36,6 +40,7 @@ services:
     volumes:
       - ./src/api:/app
       - ./src/common:/app/common
+      - reports_data_container:/app/reports
     ports:
       - "5000:5000"
     environment:
@@ -43,6 +48,7 @@ services:
       - FLASK_ENV=development
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
+      - RABBITMQ_HOST=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -58,9 +64,12 @@ services:
     volumes:
       - ./src/workers:/app/workers
       - ./src/common:/app/common
+      - reports_data_container:/app/reports
     environment:
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
+      - RABBITMQ_HOST=rabbitmq
+      - ROOT_REPORT_OUTPUT_DIR=/app/reports
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -76,9 +85,12 @@ services:
     volumes:
       - ./src/workers:/app/workers
       - ./src/common:/app/common
+      - reports_data_container:/app/reports
     environment:
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
+      - RABBITMQ_HOST=rabbitmq
+      - ROOT_REPORT_OUTPUT_DIR=/app/reports
     command: ["python", "-m", "workers.email_worker.email_worker"]
     depends_on:
       rabbitmq:
@@ -105,4 +117,14 @@ services:
 
 networks:
   etsy_net:
-    driver: bridge 
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+  reports_data_container:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./src/reports_data_local
+  
