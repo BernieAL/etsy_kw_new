@@ -91,6 +91,8 @@ services:
       - RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
       - RABBITMQ_HOST=rabbitmq
       - ROOT_REPORT_OUTPUT_DIR=/app/reports
+      - GOOGLE_APP_PW=${GOOGLE_APP_PW}
+      - GOOGLE_SENDER_EMAIL=${GOOGLE_SENDER_EMAIL}
     command: ["python", "-m", "workers.email_worker.email_worker"]
     depends_on:
       rabbitmq:

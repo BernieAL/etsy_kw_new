@@ -5,15 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-from dotenv import load_dotenv, find_dotenv
 from simple_chalk import chalk
-
-load_dotenv(find_dotenv())
-
-
-
-
-
 
 # Configuration
 port = 465  # For SSL
@@ -62,6 +54,7 @@ def send_email_with_report(report_file_path: str, recipient_email: str, query: s
             f'attachment; filename="{os.path.basename(report_file_path)}"'
         )
         message.attach(part)
+        print(message)
     except Exception as e:
         print(chalk.red(f"[ERROR] Failed to attach file: {e}"))
         return False
