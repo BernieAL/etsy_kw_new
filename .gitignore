@@ -50,4 +50,30 @@ yarn-error.log*
 *.log
 .coverage
 htmlcov/
-.pytest_cache/ 
+.pytest_cache/
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+
+# Logs
+*.log
+logs/
+
+# Local development
+.DS_Store
+node_modules/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# ECR
+reports_data_local/ 
