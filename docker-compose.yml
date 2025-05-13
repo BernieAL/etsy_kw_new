@@ -35,11 +35,11 @@ services:
 
   api:
     build:
-      context: ./src
+      context: ./Src
       dockerfile: api/Dockerfile.api
     volumes:
-      - ./src/api:/app
-      - ./src/common:/app/common
+      - ./Src/api:/app
+      - ./Src/common:/app/common
       - reports_data_container:/app/reports
     ports:
       - "5000:5000"
@@ -59,11 +59,11 @@ services:
 
   scraper_worker:
     build:
-      context: ./src
+      context: ./Src
       dockerfile: workers/scraper_worker/Dockerfile.scraper_worker
     volumes:
-      - ./src/workers:/app/workers
-      - ./src/common:/app/common
+      - ./Src/workers:/app/workers
+      - ./Src/common:/app/common
       - reports_data_container:/app/reports
     environment:
       - REDIS_URL=redis://redis:6379/0
@@ -80,11 +80,11 @@ services:
 
   email_worker:
     build:
-      context: ./src
+      context: ./Src
       dockerfile: workers/email_worker/Dockerfile.email_worker
     volumes:
-      - ./src/workers:/app/workers
-      - ./src/common:/app/common
+      - ./Src/workers:/app/workers
+      - ./Src/common:/app/common
       - reports_data_container:/app/reports
     environment:
       - REDIS_URL=redis://redis:6379/0
@@ -102,20 +102,21 @@ services:
     networks:
       - etsy_net
 
-  client:
-    build:
-      context: ./client
-      target: dev
-    volumes:
-      - ./client:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    depends_on:
-      - api
-    command: ["npm", "run", "dev", "--", "--host"]
-    networks:
-      - etsy_net
+  # client:
+  #   build:
+  #     context: ./client
+  #     dockerfile: Dockerfile.client
+  #     target: dev
+  #   volumes:
+  #     - ./client:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - api
+  #   command: ["npm", "run", "dev", "--", "--host"]
+  #   networks:
+  #     - etsy_net
 
 networks:
   etsy_net:
@@ -128,5 +129,5 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ./src/reports_data_local
+      device: ./Src/reports_data_local
   

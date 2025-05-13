@@ -2,49 +2,33 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and Chrome
 RUN apt-get update && apt-get install -y \
-    gcc \
-    wget \
-    gnupg \
-    unzip \
-    curl \
+    gcc wget gnupg unzip curl \
+    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Chrome-specific environment variables
 ENV CHROME_BIN=/usr/bin/google-chrome-stable
 ENV CHROME_PATH=/usr/lib/chromium/
 ENV CHROME_DRIVER_PATH=/usr/local/bin/chromedriver
 ENV DISPLAY=:99
 ENV RUNNING_IN_DOCKER=1
 
-# Install Chrome and dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    unzip \
-    gnupg \
-    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
+# Install Python dependencies
 COPY workers/scraper_worker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install "watchdog[watchmedo]" \
     && pip install webdriver-manager==4.0.1
 
-# Copy the common and workers code
+# Copy code
 COPY common /app/common
 COPY workers /app/workers
 
-# Create __init__.py files if they don't exist
 RUN touch /app/workers/__init__.py \
     && touch /app/workers/scraper_worker/__init__.py
 
-# Set Python path to include the app directory
 ENV PYTHONPATH=/app
 
-# Run the worker with watchdog for auto-reload
 CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "-m", "workers.scraper_worker.scraper_worker"]
