@@ -52,19 +52,13 @@ yarn-error.log*
 htmlcov/
 .pytest_cache/
 
-# Virtual Environment
-venv/
-ENV/
-env/
-.env
+# Lambda build artifacts
+*.zip
 
-# Logs
-*.log
-logs/
-
-# Local development
-.DS_Store
-node_modules/
+temp/
+src/workers/scraper_worker/reports/
+src/workers/scraper_worker/__pycache__/
+src/workers/email_worker/__pycache__/
 
 # Terraform
 .terraform/
@@ -74,6 +68,11 @@ node_modules/
 .terraformrc
 terraform.rc
 .terraform.lock.hcl
+infra/terraform.tfstate
+infra/terraform.tfstate.*
+infra/.terraform/
+infra/terraform.tfvars
 
 # ECR
 reports_data_local/ 
+infra/terraform.tfvars

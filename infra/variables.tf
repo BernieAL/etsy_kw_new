@@ -16,18 +16,6 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "rabbitmq_username" {
-  description = "Username for RabbitMQ"
-  type        = string
-  sensitive   = true
-}
-
-variable "rabbitmq_password" {
-  description = "Password for RabbitMQ"
-  type        = string
-  sensitive   = true
-}
-
 variable "google_app_pw" {
   description = "Google App Password for email sending"
   type        = string
@@ -37,6 +25,18 @@ variable "google_app_pw" {
 variable "google_sender_email" {
   description = "Google email address for sending emails"
   type        = string
+}
+
+variable "lambda_timeout" {
+  description = "Timeout for Lambda functions in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "lambda_memory_size" {
+  description = "Memory size for Lambda functions in MB"
+  type        = number
+  default     = 512
 }
 
 variable "instance_type" {

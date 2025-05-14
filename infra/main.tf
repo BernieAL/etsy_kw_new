@@ -149,7 +149,54 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   }
 }
 
-# S3 bucket for reports backup
+# SQS Queues
+resource "aws_sqs_queue" "scraper_queue" {
+  name                      = "${var.project_name}-scraper-queue"
+  message_retention_seconds = 86400  # 1 day
+  visibility_timeout_seconds = 300   # 5 minutes
+  delay_seconds             = 0
+  receive_wait_time_seconds = 0
+
+  tags = {
+    Name = "${var.project_name}-scraper-queue"
+  }
+}
+
+resource "aws_sqs_queue" "email_queue" {
+  name                      = "${var.project_name}-email-queue"
+  message_retention_seconds = 86400  # 1 day
+  visibility_timeout_seconds = 30    # 30 seconds
+  delay_seconds             = 0
+  receive_wait_time_seconds = 0
+
+  tags = {
+    Name = "${var.project_name}-email-queue"
+  }
+}
+
+# DynamoDB table for job status
+resource "aws_dynamodb_table" "job_status" {
+  name           = "${var.project_name}-job-status"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "job_id"
+  range_key      = "timestamp"
+
+  attribute {
+    name = "job_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+
+  tags = {
+    Name = "${var.project_name}-job-status"
+  }
+}
+
+# S3 bucket for reports
 resource "aws_s3_bucket" "reports" {
   bucket = "${var.project_name}-reports-${var.environment}"
   
@@ -165,7 +212,6 @@ resource "aws_s3_bucket_versioning" "reports" {
   }
 }
 
-# Lifecycle rule to delete old reports
 resource "aws_s3_bucket_lifecycle_configuration" "reports" {
   bucket = aws_s3_bucket.reports.id
 
@@ -173,8 +219,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "reports" {
     id     = "delete-old-reports"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     expiration {
-      days = 30 # Keep reports for 30 days
+      days = 30
     }
   }
 }
@@ -182,7 +232,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "reports" {
 # ElastiCache for Redis
 resource "aws_elasticache_subnet_group" "redis" {
   name       = "${var.project_name}-redis-subnet"
-  subnet_ids = [aws_subnet.private.id]
+  subnet_ids = [aws_subnet.public.id]  # Using public subnet since we removed private
 }
 
 resource "aws_elasticache_cluster" "redis" {
@@ -195,41 +245,23 @@ resource "aws_elasticache_cluster" "redis" {
   security_group_ids  = [aws_security_group.redis.id]
 }
 
-# Amazon MQ for RabbitMQ
-resource "aws_mq_broker" "rabbitmq" {
-  broker_name = "${var.project_name}-rabbitmq"
+# Lambda Layer for scraper dependencies
+resource "aws_lambda_layer_version" "scraper_deps" {
+  filename            = "../src/workers/scraper_worker/layer.zip"
+  layer_name          = "${var.project_name}-scraper-deps"
+  compatible_runtimes = ["python3.9"]
+  description         = "Selenium and Chrome dependencies for the scraper worker"
+}
 
-  engine_type        = "RabbitMQ"
-  engine_version     = "3.10.20"
-  host_instance_type = "mq.t3.micro"  # Smallest instance type
-  security_groups    = [aws_security_group.rabbitmq.id]
-  subnet_ids         = [aws_subnet.private.id]
-
-  user {
-    username = var.rabbitmq_username
-    password = var.rabbitmq_password
-  }
+# Lambda Layer for pandas
+resource "aws_lambda_layer_version" "pandas_deps" {
+  filename            = "../src/workers/scraper_worker/pandas_layer.zip"
+  layer_name          = "${var.project_name}-pandas-deps"
+  compatible_runtimes = ["python3.9"]
+  description         = "Pandas and its dependencies"
 }
 
 # Lambda functions
-resource "aws_lambda_function" "api" {
-  filename         = "../src/api/lambda_function.zip"
-  function_name    = "${var.project_name}-api"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "lambda_function.lambda_handler"
-  runtime         = "python3.9"
-  timeout         = 30
-  memory_size     = 256
-
-  environment {
-    variables = {
-      REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
-      RABBITMQ_URL     = "amqp://${var.rabbitmq_username}:${var.rabbitmq_password}@${aws_mq_broker.rabbitmq.instances[0].endpoints[0]}:5672"
-      S3_BUCKET        = aws_s3_bucket.reports.id
-    }
-  }
-}
-
 resource "aws_lambda_function" "scraper_worker" {
   filename         = "../src/workers/scraper_worker/lambda_function.zip"
   function_name    = "${var.project_name}-scraper-worker"
@@ -238,12 +270,16 @@ resource "aws_lambda_function" "scraper_worker" {
   runtime         = "python3.9"
   timeout         = 300  # 5 minutes
   memory_size     = 512
+  layers          = [
+    aws_lambda_layer_version.scraper_deps.arn,
+    aws_lambda_layer_version.pandas_deps.arn
+  ]
 
   environment {
     variables = {
-      REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
-      RABBITMQ_URL     = "amqp://${var.rabbitmq_username}:${var.rabbitmq_password}@${aws_mq_broker.rabbitmq.instances[0].endpoints[0]}:5672"
-      S3_BUCKET        = aws_s3_bucket.reports.id
+      EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.url
+      S3_BUCKET       = aws_s3_bucket.reports.id
+      DYNAMODB_TABLE  = aws_dynamodb_table.job_status.name
     }
   }
 }
@@ -259,11 +295,10 @@ resource "aws_lambda_function" "email_worker" {
 
   environment {
     variables = {
-      REDIS_URL        = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
-      RABBITMQ_URL     = "amqp://${var.rabbitmq_username}:${var.rabbitmq_password}@${aws_mq_broker.rabbitmq.instances[0].endpoints[0]}:5672"
-      S3_BUCKET        = aws_s3_bucket.reports.id
-      GOOGLE_APP_PW    = var.google_app_pw
-      GOOGLE_SENDER_EMAIL = var.google_sender_email
+      EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.url
+      S3_BUCKET       = aws_s3_bucket.reports.id
+      DYNAMODB_TABLE  = aws_dynamodb_table.job_status.name
+      GOOGLE_APP_PW   = var.google_app_pw
     }
   }
 }
@@ -276,7 +311,7 @@ resource "aws_apigatewayv2_api" "api" {
 
 resource "aws_apigatewayv2_stage" "api" {
   api_id = aws_apigatewayv2_api.api.id
-  name   = var.environment
+  name   = "prod"
   auto_deploy = true
 }
 
@@ -284,19 +319,17 @@ resource "aws_apigatewayv2_integration" "api" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
 
-  connection_type    = "INTERNET"
-  description        = "Lambda integration"
+  integration_uri    = aws_lambda_function.scraper_worker.invoke_arn
   integration_method = "POST"
-  integration_uri    = aws_lambda_function.api.invoke_arn
 }
 
 resource "aws_apigatewayv2_route" "api" {
   api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /{proxy+}"
+  route_key = "POST /scrape"
   target    = "integrations/${aws_apigatewayv2_integration.api.id}"
 }
 
-# IAM role for Lambda
+# IAM roles and policies
 resource "aws_iam_role" "lambda_role" {
   name = "${var.project_name}-lambda-role"
 
@@ -329,8 +362,8 @@ resource "aws_iam_role_policy" "lambda_s3" {
       {
         Effect = "Allow"
         Action = [
-          "s3:GetObject",
           "s3:PutObject",
+          "s3:GetObject",
           "s3:ListBucket"
         ]
         Resource = [
@@ -342,38 +375,63 @@ resource "aws_iam_role_policy" "lambda_s3" {
   })
 }
 
-# VPC and networking
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+resource "aws_iam_role_policy" "lambda_sqs" {
+  name = "${var.project_name}-lambda-sqs"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [
+          aws_sqs_queue.scraper_queue.arn,
+          aws_sqs_queue.email_queue.arn
+        ]
+      }
+    ]
+  })
 }
 
-resource "aws_subnet" "private" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.1.0/24"
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name = "${var.project_name}-lambda-dynamodb"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = aws_dynamodb_table.job_status.arn
+      }
+    ]
+  })
 }
 
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.2.0/24"
-  map_public_ip_on_launch = true
+# SQS triggers for Lambda functions
+resource "aws_lambda_event_source_mapping" "scraper_queue" {
+  event_source_arn = aws_sqs_queue.scraper_queue.arn
+  function_name    = aws_lambda_function.scraper_worker.function_name
+  batch_size       = 1
 }
 
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
-  }
-}
-
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
+resource "aws_lambda_event_source_mapping" "email_queue" {
+  event_source_arn = aws_sqs_queue.email_queue.arn
+  function_name    = aws_lambda_function.email_worker.function_name
+  batch_size       = 1
 }
 
 # Security groups
@@ -385,26 +443,6 @@ resource "aws_security_group" "redis" {
   ingress {
     from_port   = 6379
     to_port     = 6379
-    protocol    = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-  }
-}
-
-resource "aws_security_group" "rabbitmq" {
-  name        = "${var.project_name}-rabbitmq"
-  description = "RabbitMQ security group"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 5672
-    to_port     = 5672
-    protocol    = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-  }
-
-  ingress {
-    from_port   = 15672
-    to_port     = 15672
     protocol    = "tcp"
     security_groups = [aws_security_group.lambda.id]
   }

@@ -1,0 +1,34 @@
+version: "3.8"
+services:
+  api:
+    image: 058135280735.dkr.ecr.us-east-1.amazonaws.com/api:latest
+    ports:
+      - "5000:5000"
+    networks:
+      - etsy_net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - etsy_net
+
+  scraper_worker:
+    image: 058135280735.dkr.ecr.us-east-1.amazonaws.com/scraper_worker:latest
+    depends_on:
+      - rabbitmq
+    networks:
+      - etsy_net
+
+  email_worker:
+    image: 058135280735.dkr.ecr.us-east-1.amazonaws.com/email_worker:latest
+    depends_on:
+      - rabbitmq
+    networks:
+      - etsy_net
+
+networks:
+  etsy_net:
+    driver: bridge
