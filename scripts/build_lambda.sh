@@ -1,49 +1,55 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # Create temporary directories
-mkdir -p temp/scraper_worker_pkg
-mkdir -p temp/email_worker_pkg
-mkdir -p temp/scraper_layer/python
-mkdir -p temp/pandas_layer/python
+mkdir -p build/lambda/scraper_worker
+mkdir -p build/lambda/email_worker
 
-# Install core dependencies for scraper worker (lightweight)
-pip install --target temp/scraper_worker_pkg boto3
+# Install dependencies for scraper worker
+echo "Installing scraper worker dependencies..."
+pip install -r src/lambda/requirements.txt -t build/lambda/scraper_worker/python/
 
-# Install selenium dependencies in the main layer
-pip install --target temp/scraper_layer/python selenium-wire undetected-chromedriver
+# Remove unnecessary files to reduce package size
+echo "Cleaning up scraper worker dependencies..."
+find build/lambda/scraper_worker/python -type d -name "tests" -exec rm -rf {} +
+find build/lambda/scraper_worker/python -type d -name "__pycache__" -exec rm -rf {} +
+find build/lambda/scraper_worker/python -type d -name "test" -exec rm -rf {} +
+find build/lambda/scraper_worker/python -type d -name "docs" -exec rm -rf {} +
+find build/lambda/scraper_worker/python -type f -name "*.pyc" -delete
+find build/lambda/scraper_worker/python -type f -name "*.pyo" -delete
 
-# Install pandas in a separate layer
-pip install --target temp/pandas_layer/python pandas
+# Copy scraper worker code
+echo "Copying scraper worker code..."
+cp src/lambda/scraper_worker/lambda_function.py build/lambda/scraper_worker/
+cp -r src/common build/lambda/scraper_worker/
+
+# Create scraper worker layer
+echo "Creating scraper worker layer..."
+cd build/lambda/scraper_worker
+zip -r ../../../lambda/scraper_worker/layer.zip python/
+zip -r ../../../lambda/scraper_worker/function.zip lambda_function.py common/
 
 # Install dependencies for email worker
-pip install --target temp/email_worker_pkg boto3
+echo "Installing email worker dependencies..."
+cd ../../..
+pip install boto3 python-dotenv -t build/lambda/email_worker/python/
 
-# Copy Lambda function code
-cp src/workers/scraper_worker/lambda_function.py temp/scraper_worker_pkg/
-cp src/workers/email_worker/lambda_function.py temp/email_worker_pkg/
+# Copy email worker code
+echo "Copying email worker code..."
+cp src/lambda/email_worker/lambda_function.py build/lambda/email_worker/
+cp -r src/common build/lambda/email_worker/
+cp -r src/workers/email_worker/email_builder.py build/lambda/email_worker/
 
-# Get absolute paths for PowerShell
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-PROJECT_DIR=$(dirname "$SCRIPT_DIR")
+# Create email worker layer
+echo "Creating email worker layer..."
+cd build/lambda/email_worker
+zip -r ../../../lambda/email_worker/layer.zip python/
+zip -r ../../../lambda/email_worker/function.zip lambda_function.py common/ email_builder.py
 
-# Create source and destination paths for PowerShell
-SCRAPER_PKG_PATH=$(cygpath -w "${PROJECT_DIR}/temp/scraper_worker_pkg")
-EMAIL_PKG_PATH=$(cygpath -w "${PROJECT_DIR}/temp/email_worker_pkg")
-SCRAPER_LAYER_PATH=$(cygpath -w "${PROJECT_DIR}/temp/scraper_layer/python")
-PANDAS_LAYER_PATH=$(cygpath -w "${PROJECT_DIR}/temp/pandas_layer/python")
+# Clean up
+cd ../../..
+rm -rf build
 
-SCRAPER_ZIP_PATH=$(cygpath -w "${PROJECT_DIR}/src/workers/scraper_worker/lambda_function.zip")
-EMAIL_ZIP_PATH=$(cygpath -w "${PROJECT_DIR}/src/workers/email_worker/lambda_function.zip")
-SCRAPER_LAYER_ZIP_PATH=$(cygpath -w "${PROJECT_DIR}/src/workers/scraper_worker/layer.zip")
-PANDAS_LAYER_ZIP_PATH=$(cygpath -w "${PROJECT_DIR}/src/workers/scraper_worker/pandas_layer.zip")
-
-# Create zip files using PowerShell with proper Windows paths
-powershell -Command "Compress-Archive -Path \"${SCRAPER_PKG_PATH}\\*\" -DestinationPath \"${SCRAPER_ZIP_PATH}\" -Force"
-powershell -Command "Compress-Archive -Path \"${EMAIL_PKG_PATH}\\*\" -DestinationPath \"${EMAIL_ZIP_PATH}\" -Force"
-powershell -Command "Compress-Archive -Path \"${SCRAPER_LAYER_PATH}\\*\" -DestinationPath \"${SCRAPER_LAYER_ZIP_PATH}\" -Force"
-powershell -Command "Compress-Archive -Path \"${PANDAS_LAYER_PATH}\\*\" -DestinationPath \"${PANDAS_LAYER_ZIP_PATH}\" -Force"
-
-# Cleanup
-rm -rf temp
-
-echo "Lambda deployment packages and layers created successfully!" 
+echo "Lambda functions packaged successfully!" 

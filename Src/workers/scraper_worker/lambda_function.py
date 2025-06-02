@@ -26,14 +26,14 @@ def update_job_status(job_id: str, status: str, details: Dict[str, Any] = None):
 
 def setup_driver():
     import undetected_chromedriver as uc
-    from seleniumwire import webdriver
+    from selenium import webdriver
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.common.exceptions import ElementNotVisibleException, StaleElementReferenceException
     from selenium.common.exceptions import NoSuchElementException, TimeoutException
-    """Initialize undetected ChromeDriver with selenium-wire."""
+    """Initialize undetected ChromeDriver with standard selenium."""
     try:
         # Get Chrome version
         chrome_version = os.popen('google-chrome --version').read().strip().split()[-1].split('.')[0]
@@ -58,12 +58,10 @@ def setup_driver():
         chrome_options.add_argument('--disable-web-security')
         chrome_options.add_argument('--allow-running-insecure-content')
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        # Initialize ChromeDriver with both undetected-chromedriver and selenium-wire
-        driver = webdriver.Chrome(
-            service=Service(),
+        # Initialize ChromeDriver with undetected-chromedriver and standard selenium
+        driver = uc.Chrome(
             options=chrome_options,
-            version_main=int(chrome_version),
-            seleniumwire_options={}  # Add selenium-wire options here if needed
+            version_main=int(chrome_version)
         )
         print("ChromeDriver initialized successfully")
         return driver

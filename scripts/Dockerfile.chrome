@@ -1,0 +1,17 @@
+FROM amazonlinux:2
+
+# Install required tools
+RUN yum update -y && \
+    yum install -y rpm cpio zip unzip curl
+
+# Create working directory
+WORKDIR /build
+
+# Copy the build script
+COPY create_chrome_layer.sh .
+
+# Make script executable
+RUN chmod +x create_chrome_layer.sh
+
+# Run the build script
+CMD ["./create_chrome_layer.sh"] 

@@ -106,7 +106,12 @@ resource "aws_instance" "app" {
     market_type = "spot"
     spot_options {
       max_price = "0.0172" # Maximum price per hour (adjust based on your needs)
+      spot_instance_type = "persistent"
     }
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 
   # EBS optimization for better performance
@@ -245,47 +250,64 @@ resource "aws_elasticache_cluster" "redis" {
   security_group_ids  = [aws_security_group.redis.id]
 }
 
-# Lambda Layer for scraper dependencies
+# Lambda Layer for Chrome
+resource "aws_lambda_layer_version" "chrome" {
+  filename         = "lambda/chrome_layer.zip"
+  layer_name       = "${var.project_name}-chrome"
+  description      = "Chrome binary for scraper worker"
+  compatible_runtimes = ["python3.9"]
+}
+
+# Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "scraper_deps" {
-  filename            = "../src/workers/scraper_worker/layer.zip"
-  layer_name          = "${var.project_name}-scraper-deps"
+  filename         = "lambda/scraper_worker/layer.zip"
+  layer_name       = "${var.project_name}-scraper-deps"
+  description      = "Dependencies for scraper worker"
   compatible_runtimes = ["python3.9"]
-  description         = "Selenium and Chrome dependencies for the scraper worker"
 }
 
-# Lambda Layer for pandas
-resource "aws_lambda_layer_version" "pandas_deps" {
-  filename            = "../src/workers/scraper_worker/pandas_layer.zip"
-  layer_name          = "${var.project_name}-pandas-deps"
+resource "aws_lambda_layer_version" "email_deps" {
+  filename         = "lambda/email_worker/layer.zip"
+  layer_name       = "${var.project_name}-email-deps"
+  description      = "Dependencies for email worker"
   compatible_runtimes = ["python3.9"]
-  description         = "Pandas and its dependencies"
 }
 
-# Lambda functions
+# Lambda Functions
 resource "aws_lambda_function" "scraper_worker" {
-  filename         = "../src/workers/scraper_worker/lambda_function.zip"
+  filename         = "lambda/scraper_worker/function.zip"
   function_name    = "${var.project_name}-scraper-worker"
   role            = aws_iam_role.lambda_role.arn
   handler         = "lambda_function.lambda_handler"
   runtime         = "python3.9"
   timeout         = 300  # 5 minutes
-  memory_size     = 512
-  layers          = [
-    aws_lambda_layer_version.scraper_deps.arn,
-    aws_lambda_layer_version.pandas_deps.arn
-  ]
+  memory_size     = 1024
 
   environment {
     variables = {
-      EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.url
-      S3_BUCKET       = aws_s3_bucket.reports.id
-      DYNAMODB_TABLE  = aws_dynamodb_table.job_status.name
+      SQS_EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.url
+      DYNAMODB_TABLE     = aws_dynamodb_table.job_status.name
+      S3_BUCKET          = aws_s3_bucket.reports.id
     }
+  }
+
+  layers = [
+    aws_lambda_layer_version.chrome.arn,
+    aws_lambda_layer_version.scraper_deps.arn
+  ]
+
+  vpc_config {
+    subnet_ids         = [aws_subnet.public.id]
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  tags = {
+    Name = "${var.project_name}-scraper-worker"
   }
 }
 
 resource "aws_lambda_function" "email_worker" {
-  filename         = "../src/workers/email_worker/lambda_function.zip"
+  filename         = "lambda/email_worker/function.zip"
   function_name    = "${var.project_name}-email-worker"
   role            = aws_iam_role.lambda_role.arn
   handler         = "lambda_function.lambda_handler"
@@ -295,12 +317,29 @@ resource "aws_lambda_function" "email_worker" {
 
   environment {
     variables = {
-      EMAIL_QUEUE_URL = aws_sqs_queue.email_queue.url
-      S3_BUCKET       = aws_s3_bucket.reports.id
-      DYNAMODB_TABLE  = aws_dynamodb_table.job_status.name
-      GOOGLE_APP_PW   = var.google_app_pw
+      DYNAMODB_TABLE = aws_dynamodb_table.job_status.name
+      S3_BUCKET      = aws_s3_bucket.reports.id
     }
   }
+
+  layers = [aws_lambda_layer_version.email_deps.arn]
+
+  tags = {
+    Name = "${var.project_name}-email-worker"
+  }
+}
+
+# Lambda Event Source Mappings
+resource "aws_lambda_event_source_mapping" "scraper_queue" {
+  event_source_arn = aws_sqs_queue.scraper_queue.arn
+  function_name    = aws_lambda_function.scraper_worker.function_name
+  batch_size       = 1
+}
+
+resource "aws_lambda_event_source_mapping" "email_queue" {
+  event_source_arn = aws_sqs_queue.email_queue.arn
+  function_name    = aws_lambda_function.email_worker.function_name
+  batch_size       = 1
 }
 
 # API Gateway
@@ -419,19 +458,6 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
       }
     ]
   })
-}
-
-# SQS triggers for Lambda functions
-resource "aws_lambda_event_source_mapping" "scraper_queue" {
-  event_source_arn = aws_sqs_queue.scraper_queue.arn
-  function_name    = aws_lambda_function.scraper_worker.function_name
-  batch_size       = 1
-}
-
-resource "aws_lambda_event_source_mapping" "email_queue" {
-  event_source_arn = aws_sqs_queue.email_queue.arn
-  function_name    = aws_lambda_function.email_worker.function_name
-  batch_size       = 1
 }
 
 # Security groups
