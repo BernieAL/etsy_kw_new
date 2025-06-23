@@ -323,4 +323,171 @@ sudo curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
+## Environment Variables Setup for Deployment
+
+### Method 1: Create .env on Server (Recommended)
+
+1. **SSH into your VPS:**
+   ```bash
+   ssh root@YOUR_VPS_IP
+   ```
+
+2. **Navigate to your app directory:**
+   ```bash
+   cd /opt/etsy-monitor
+   ```
+
+3. **Create the .env file:**
+   ```bash
+   nano .env
+   ```
+
+4. **Add your production configuration:**
+   ```bash
+   # Server Configuration
+   VPS_IP=YOUR_ACTUAL_VPS_IP
+   VPS_USER=root
+   
+   # Database Configuration
+   DATABASE_PATH=/app/data/etsy_monitor.db
+   
+   # API Configuration
+   API_HOST=0.0.0.0
+   API_PORT=8000
+   
+   # Monitoring Configuration
+   DEFAULT_SCHEDULE_INTERVAL=3600
+   DEFAULT_NOTIFICATION_THRESHOLD=5
+   
+   # Logging Configuration
+   LOG_LEVEL=INFO
+   LOG_FILE=logs/etsy_monitor.log
+   ```
+
+5. **Save and exit (Ctrl+X, Y, Enter)**
+
+### Method 2: Copy from Local (Alternative)
+
+If you prefer to manage the `.env` file locally:
+
+1. **Create .env locally:**
+   ```bash
+   # On your local machine
+   cp env.example .env
+   nano .env
+   ```
+
+2. **Add your production values:**
+   ```bash
+   VPS_IP=YOUR_ACTUAL_VPS_IP
+   VPS_USER=root
+   DATABASE_PATH=/app/data/etsy_monitor.db
+   API_HOST=0.0.0.0
+   API_PORT=8000
+   ```
+
+3. **Copy to server during deployment:**
+   ```bash
+   # The deploy.sh script will copy .env if it exists
+   scp .env root@YOUR_VPS_IP:/opt/etsy-monitor/
+   ```
+
+### Method 3: Use deploy.sh with Environment Variables
+
+The `deploy.sh` script automatically handles `.env` files:
+
+1. **Create .env locally with production values**
+2. **Run deployment:**
+   ```bash
+   ./deploy.sh
+   ```
+3. **The script will automatically copy .env to the server**
+
+## Security Best Practices
+
+### ✅ Do:
+- Use different `.env` files for different environments
+- Keep production `.env` files secure and backed up
+- Use strong, unique values for production
+- Regularly rotate sensitive values
+
+### ❌ Don't:
+- Commit `.env` files to version control
+- Use the same values across environments
+- Share `.env` files in public repositories
+- Use default/example values in production
+
+## Environment-Specific Configuration
+
+### Development (.env.local):
+```bash
+DATABASE_PATH=etsy_monitor.db
+API_HOST=localhost
+API_PORT=8000
+VPS_IP=localhost
+VPS_USER=ubuntu
+```
+
+### Production (.env.production):
+```bash
+DATABASE_PATH=/app/data/etsy_monitor.db
+API_HOST=0.0.0.0
+API_PORT=8000
+VPS_IP=YOUR_ACTUAL_VPS_IP
+VPS_USER=root
+```
+
+## Verification
+
+After setting up your `.env` file:
+
+1. **Test the configuration:**
+   ```bash
+   # On your VPS
+   cd /opt/etsy-monitor
+   source .env
+   echo "VPS_IP: $VPS_IP"
+   echo "DATABASE_PATH: $DATABASE_PATH"
+   ```
+
+2. **Check if the application can read the variables:**
+   ```bash
+   # Test the API
+   curl http://localhost:8000/health
+   ```
+
+3. **Verify database path:**
+   ```bash
+   ls -la /app/data/etsy_monitor.db
+   ```
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **Environment variables not loading:**
+   ```bash
+   # Check if .env file exists
+   ls -la /opt/etsy-monitor/.env
+   
+   # Check file permissions
+   chmod 600 /opt/etsy-monitor/.env
+   ```
+
+2. **Database path issues:**
+   ```bash
+   # Create data directory if it doesn't exist
+   mkdir -p /app/data
+   chown root:root /app/data
+   ```
+
+3. **API not accessible:**
+   ```bash
+   # Check if API is running
+   docker compose ps
+   
+   # Check logs
+   docker compose logs backend
+   ```
+
 This deployment strategy provides a **cost-effective, scalable, and maintainable** solution for running your Etsy monitoring tool in production! 

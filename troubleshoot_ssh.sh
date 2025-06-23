@@ -5,7 +5,10 @@ set -e
 
 # Load environment variables if .env file exists
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    # Load environment variables, ignoring comments and empty lines
+    set -a  # automatically export all variables
+    source .env
+    set +a  # stop automatically exporting
 fi
 
 # Configuration - can be overridden by environment variables

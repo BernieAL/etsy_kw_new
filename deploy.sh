@@ -7,7 +7,10 @@ echo "🚀 Deploying Etsy Monitoring Tool to Production"
 
 # Load environment variables if .env file exists
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    # Load environment variables, ignoring comments and empty lines
+    set -a  # automatically export all variables
+    source .env
+    set +a  # stop automatically exporting
 fi
 
 # Configuration - can be overridden by environment variables
@@ -146,6 +149,16 @@ deploy_application() {
     print_status "Copying configuration files..."
     scp docker-compose.prod.yml $VPS_USER@$VPS_IP:$APP_DIR/docker-compose.yml
     scp run_*.sh $VPS_USER@$VPS_IP:$APP_DIR/
+    
+    # Copy .env file if it exists locally
+    if [ -f .env ]; then
+        print_status "Copying .env file..."
+        scp .env $VPS_USER@$VPS_IP:$APP_DIR/
+        ssh $VPS_USER@$VPS_IP "chmod 600 $APP_DIR/.env"
+    else
+        print_warning "No .env file found locally. Please create one on the server manually."
+        print_status "You can copy env.example to .env and configure it on the server."
+    fi
     
     # Make scripts executable
     ssh $VPS_USER@$VPS_IP "chmod +x $APP_DIR/run_*.sh"
