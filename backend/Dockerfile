@@ -42,6 +42,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers
 RUN playwright install chromium
 
+# Copy all application files
+COPY . .
+
 # Create a volume mount point for development
 VOLUME ["/app"]
 

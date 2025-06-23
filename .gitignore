@@ -67,4 +67,10 @@ yarn-error.log*
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+backend/etsy_monitor.db 

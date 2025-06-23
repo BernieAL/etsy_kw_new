@@ -1,2 +1,5 @@
 playwright==1.40.0
-playwright-stealth==1.0.5 
+playwright-stealth==1.0.5
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0 

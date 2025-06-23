@@ -12,7 +12,7 @@ services:
     network_mode: host
     stdin_open: true
     tty: true
-    command: python etsy_scraper.py
+    command: tail -f /dev/null  # Keep container running indefinitely
 
   # frontend:
   #   build: ./frontend

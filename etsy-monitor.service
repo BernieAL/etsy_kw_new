@@ -1,0 +1,17 @@
+[Unit]
+Description=Etsy Monitoring Worker
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/etsy-monitor
+ExecStart=/usr/bin/python3 /opt/etsy-monitor/app/worker.py --check-interval 300
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONPATH=/opt/etsy-monitor/app
+
+[Install]
+WantedBy=multi-user.target
