@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  etsy-kw-tool-dev:
+    build:
+      context: .
+      dockerfile: backend/run_scripts/Dockerfile.selenium
+    container_name: etsy-kw-tool-dev
+    environment:
+      - DISPLAY=${DISPLAY}
+      - RUNNING_IN_DOCKER=1
+      - PYTHONPATH=/app
+      - CHROME_OPTS=--no-sandbox --disable-dev-shm-usage --disable-gpu --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0
+    volumes:
+      # Mount only the backend directory for development (not the entire project)
+      - ./backend:/app/backend
+      # Mount X11 socket for GUI access (if needed)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Mount .env file
+      - ./.env:/app/.env:ro
+      # Create a volume for persistent data
+      - selenium_data:/app/data
+    ports:
+      - "9222:9222"  # Chrome remote debugging
+    stdin_open: true
+    tty: true
+    # Use host network for better proxy support
+    network_mode: host
+    # Add capabilities for Chrome
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+
+volumes:
+  selenium_data:
+    driver: local 

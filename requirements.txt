@@ -1,0 +1,8 @@
+undetected-chromedriver
+webdriver-manager
+selenium
+python-dotenv
+requests
+beautifulsoup4
+selenium-wire
+blinker==1.6.3 

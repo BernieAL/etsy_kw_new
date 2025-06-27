@@ -5,7 +5,7 @@ import {
   BellIcon, 
   CogIcon, 
   ChartBarIcon,
-  PlusIcon,
+  UserIcon,
   Bars3Icon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -25,6 +25,13 @@ const navigation = [
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLoginLogout = () => {
+    // TODO: Implement authentication logic
+    console.log('Login/Logout clicked');
+    // For now, just show an alert
+    alert('Authentication feature coming soon!');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,14 +114,14 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1" />
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              {/* Add new rule button */}
-              <Link
-                to="/rules/new"
-                className="btn-primary flex items-center gap-x-2"
+              {/* Login button */}
+              <button
+                onClick={handleLoginLogout}
+                className="btn-secondary flex items-center gap-x-2"
               >
-                <PlusIcon className="h-4 w-4" />
-                New Rule
-              </Link>
+                <UserIcon className="h-4 w-4" />
+                Login
+              </button>
             </div>
           </div>
         </div>

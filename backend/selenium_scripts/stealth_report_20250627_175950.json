@@ -1,0 +1,110 @@
+[
+  {
+    "site": "Bot Detection (bot.sannysoft.com)",
+    "timestamp": "2025-06-27T17:58:59.493081",
+    "successes": [
+      "JavaScript: ENABLED and functional",
+      "Navigator API: Accessible",
+      "Window API: Accessible",
+      "Document API: Accessible",
+      "WebDriver test: PASSED",
+      "Chrome test: PASSED",
+      "Languages test: PASSED",
+      "Plugins test: PASSED"
+    ],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "headless_detected: 'headless' found in page",
+      "bot_detected: 'bot' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "fingerprint_detected: 'canvas' found in page",
+      "fingerprint_detected: 'webgl' found in page",
+      "proxy_detected: 'tor' found in page",
+      "Some bot detection tests failed"
+    ],
+    "exposures": [
+      "Google WebGL vendor detected (should be Intel/AMD)",
+      "SwiftShader renderer detected (should be Intel/AMD)"
+    ],
+    "page_title": "Antibot",
+    "current_url": "https://bot.sannysoft.com/"
+  },
+  {
+    "site": "Headless Detection (intoli.com)",
+    "timestamp": "2025-06-27T17:59:23.190444",
+    "successes": [
+      "JavaScript: ENABLED and functional",
+      "Navigator API: Accessible",
+      "Window API: Accessible",
+      "Document API: Accessible"
+    ],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "webdriver_detected: 'automation' found in page",
+      "headless_detected: 'headless' found in page",
+      "bot_detected: 'bot' found in page",
+      "bot_detected: 'automated' found in page",
+      "bot_detected: 'scraper' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "proxy_detected: 'tor' found in page"
+    ],
+    "exposures": [
+      "Headless detection: EXPOSED (detected as headless)"
+    ],
+    "page_title": "It is *not* possible to detect and block Chrome headless",
+    "current_url": "https://intoli.com/blog/not-possible-to-block-chrome-headless/"
+  },
+  {
+    "site": "Modern Bot Detection (botd.io)",
+    "timestamp": "2025-06-27T17:59:24.612449",
+    "error": "Message: unknown error: net::ERR_TUNNEL_CONNECTION_FAILED\n  (Session info: chrome=138.0.7204.49)\nStacktrace:\n#0 0x6526e846326a <unknown>\n#1 0x6526e7f0dab0 <unknown>\n#2 0x6526e7f04ca1 <unknown>\n#3 0x6526e7ef5f99 <unknown>\n#4 0x6526e7ef7ce0 <unknown>\n#5 0x6526e7ef633e <unknown>\n#6 0x6526e7ef5caf <unknown>\n#7 0x6526e7ef5985 <unknown>\n#8 0x6526e7ef37de <unknown>\n#9 0x6526e7ef3fca <unknown>\n#10 0x6526e7f10fd9 <unknown>\n#11 0x6526e7fabbb5 <unknown>\n#12 0x6526e7f851a2 <unknown>\n#13 0x6526e7faafee <unknown>\n#14 0x6526e7f84f73 <unknown>\n#15 0x6526e7f51aeb <unknown>\n#16 0x6526e7f52751 <unknown>\n#17 0x6526e8427b7b <unknown>\n#18 0x6526e842b959 <unknown>\n#19 0x6526e840e959 <unknown>\n#20 0x6526e842c518 <unknown>\n#21 0x6526e83f310f <unknown>\n#22 0x6526e8450918 <unknown>\n#23 0x6526e8450af6 <unknown>\n#24 0x6526e8462586 <unknown>\n#25 0x778dcb8961f5 <unknown>\n",
+    "successes": [],
+    "concerns": [],
+    "exposures": []
+  },
+  {
+    "site": "Browser Fingerprinting (amiunique.org)",
+    "timestamp": "2025-06-27T17:59:49.723180",
+    "successes": [
+      "JavaScript: ENABLED and functional",
+      "Navigator API: Accessible",
+      "Window API: Accessible",
+      "Document API: Accessible",
+      "Browser fingerprint appears common"
+    ],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "bot_detected: 'bot' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "fingerprint_detected: 'canvas' found in page",
+      "fingerprint_detected: 'webgl' found in page",
+      "proxy_detected: 'proxy' found in page",
+      "proxy_detected: 'tor' found in page",
+      "Browser fingerprint may be unique"
+    ],
+    "exposures": [
+      "JavaScript detection: 'javascript is disabled' found in page"
+    ],
+    "page_title": "Am I Unique ?",
+    "current_url": "https://amiunique.org/"
+  },
+  {
+    "site": "Headers Analysis (httpbin.org/headers)",
+    "timestamp": "2025-06-27T17:59:50.216488",
+    "error": "Message: unknown error: net::ERR_TUNNEL_CONNECTION_FAILED\n  (Session info: chrome=138.0.7204.49)\nStacktrace:\n#0 0x6526e846326a <unknown>\n#1 0x6526e7f0dab0 <unknown>\n#2 0x6526e7f04ca1 <unknown>\n#3 0x6526e7ef5f99 <unknown>\n#4 0x6526e7ef7ce0 <unknown>\n#5 0x6526e7ef633e <unknown>\n#6 0x6526e7ef5caf <unknown>\n#7 0x6526e7ef5985 <unknown>\n#8 0x6526e7ef37de <unknown>\n#9 0x6526e7ef3fca <unknown>\n#10 0x6526e7f10fd9 <unknown>\n#11 0x6526e7fabbb5 <unknown>\n#12 0x6526e7f851a2 <unknown>\n#13 0x6526e7faafee <unknown>\n#14 0x6526e7f84f73 <unknown>\n#15 0x6526e7f51aeb <unknown>\n#16 0x6526e7f52751 <unknown>\n#17 0x6526e8427b7b <unknown>\n#18 0x6526e842b959 <unknown>\n#19 0x6526e840e959 <unknown>\n#20 0x6526e842c518 <unknown>\n#21 0x6526e83f310f <unknown>\n#22 0x6526e8450918 <unknown>\n#23 0x6526e8450af6 <unknown>\n#24 0x6526e8462586 <unknown>\n#25 0x778dcb8961f5 <unknown>\n",
+    "successes": [],
+    "concerns": [],
+    "exposures": []
+  },
+  {
+    "site": "IP Analysis (httpbin.org/ip)",
+    "timestamp": "2025-06-27T17:59:50.453763",
+    "error": "Message: unknown error: net::ERR_TUNNEL_CONNECTION_FAILED\n  (Session info: chrome=138.0.7204.49)\nStacktrace:\n#0 0x6526e846326a <unknown>\n#1 0x6526e7f0dab0 <unknown>\n#2 0x6526e7f04ca1 <unknown>\n#3 0x6526e7ef5f99 <unknown>\n#4 0x6526e7ef7ce0 <unknown>\n#5 0x6526e7ef633e <unknown>\n#6 0x6526e7ef5caf <unknown>\n#7 0x6526e7ef5985 <unknown>\n#8 0x6526e7ef37de <unknown>\n#9 0x6526e7ef3fca <unknown>\n#10 0x6526e7f10fd9 <unknown>\n#11 0x6526e7fabbb5 <unknown>\n#12 0x6526e7f851a2 <unknown>\n#13 0x6526e7faafee <unknown>\n#14 0x6526e7f84f73 <unknown>\n#15 0x6526e7f51aeb <unknown>\n#16 0x6526e7f52751 <unknown>\n#17 0x6526e8427b7b <unknown>\n#18 0x6526e842b959 <unknown>\n#19 0x6526e840e959 <unknown>\n#20 0x6526e842c518 <unknown>\n#21 0x6526e83f310f <unknown>\n#22 0x6526e8450918 <unknown>\n#23 0x6526e8450af6 <unknown>\n#24 0x6526e8462586 <unknown>\n#25 0x778dcb8961f5 <unknown>\n",
+    "successes": [],
+    "concerns": [],
+    "exposures": []
+  }
+]

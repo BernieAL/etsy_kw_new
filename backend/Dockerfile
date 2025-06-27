@@ -30,6 +30,20 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Docker
+ENV DISPLAY=:99
+ENV RUNNING_IN_DOCKER=1
+ENV PYTHONUNBUFFERED=1
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
 # Set working directory
 WORKDIR /app
 
@@ -45,8 +59,11 @@ RUN playwright install chromium
 # Copy all application files
 COPY . .
 
+# Create output directory
+RUN mkdir -p /app/output
+
 # Create a volume mount point for development
-VOLUME ["/app"]
+VOLUME ["/app/output"]
 
 # Default command
 CMD ["python", "etsy_scraper.py"] 

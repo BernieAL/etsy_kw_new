@@ -6,13 +6,19 @@ services:
     volumes:
       - ./backend:/app
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    env_file:
+      - .env
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
+      - IPROYAL_PROXY_HOST=${IPROYAL_PROXY_HOST}
+      - IPROYAL_PROXY_PORT=${IPROYAL_PROXY_PORT}
+      - IPROYAL_PROXY_USER=${IPROYAL_PROXY_USER}
+      - IPROYAL_PROXY_PASS=${IPROYAL_PROXY_PASS}
     network_mode: host
     stdin_open: true
     tty: true
-    command: tail -f /dev/null  # Keep container running indefinitely
+    command: uvicorn api.monitoring_api:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
 
   # frontend:
   #   build: ./frontend

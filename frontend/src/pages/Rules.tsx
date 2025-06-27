@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   PlusIcon, 
   PencilIcon, 
@@ -15,10 +16,31 @@ import { RuleForm } from '../components/RuleForm';
 import type { MonitoringRule, CreateMonitoringRuleForm } from '../types';
 
 export function Rules() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedRule, setSelectedRule] = useState<MonitoringRule | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [showEditForm, setShowEditForm] = useState(false);
   const queryClient = useQueryClient();
+
+  // Handle URL parameter for tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'create') {
+      setActiveTab('create');
+    } else {
+      setActiveTab('list');
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: 'list' | 'create') => {
+    setActiveTab(tab);
+    if (tab === 'create') {
+      setSearchParams({ tab: 'create' });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // Fetch monitoring rules
   const { data: rules = [], isLoading, error } = useQuery({
@@ -94,7 +116,7 @@ export function Rules() {
           </p>
         </div>
         <button
-          onClick={() => setActiveTab('create')}
+          onClick={() => handleTabChange('create')}
           className="btn-primary flex items-center gap-x-2"
         >
           <PlusIcon className="h-4 w-4" />
@@ -133,7 +155,7 @@ export function Rules() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('list')}
+            onClick={() => handleTabChange('list')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'list'
                 ? 'border-primary-500 text-primary-600'
@@ -143,7 +165,7 @@ export function Rules() {
             Existing Rules
           </button>
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => handleTabChange('create')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'create'
                 ? 'border-primary-500 text-primary-600'
@@ -169,7 +191,7 @@ export function Rules() {
               </p>
               <div className="mt-6">
                 <button
-                  onClick={() => setActiveTab('create')}
+                  onClick={() => handleTabChange('create')}
                   className="btn-primary"
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
@@ -212,9 +234,7 @@ export function Rules() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {rule.scraper_configs.map(config => 
-                            config.params.keyword || 'N/A'
-                          ).join(', ')}
+                          {rule.keyword || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -323,9 +343,7 @@ export function Rules() {
                   <strong>Email:</strong> {selectedRule.user_email}
                 </div>
                 <div>
-                  <strong>Keywords:</strong> {selectedRule.scraper_configs.map(config => 
-                    config.params.keyword || 'N/A'
-                  ).join(', ')}
+                  <strong>Keywords:</strong> {selectedRule.keyword || 'N/A'}
                 </div>
                 <div>
                   <strong>Status:</strong> {selectedRule.is_active ? 'Active' : 'Inactive'}

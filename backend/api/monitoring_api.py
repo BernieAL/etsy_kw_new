@@ -49,6 +49,7 @@ class MonitoringRuleCreate(BaseModel):
 
 class MonitoringRuleResponse(BaseModel):
     id: str
+    rule_name: str
     keyword: str
     user_email: str
     monitor_listing_count: bool
@@ -93,6 +94,7 @@ async def create_monitoring_rule(rule_data: MonitoringRuleCreate):
     
     return MonitoringRuleResponse(
         id=rule.id,
+        rule_name=rule.rule_name,
         keyword=extract_keywords_from_configs(rule.scraper_configs),
         user_email=rule.user_email,
         monitor_listing_count=rule.monitor_listing_count,
@@ -115,6 +117,7 @@ async def list_monitoring_rules(user_email: Optional[str] = None):
     return [
         MonitoringRuleResponse(
             id=rule.id,
+            rule_name=rule.rule_name,
             keyword=extract_keywords_from_configs(rule.scraper_configs),
             user_email=rule.user_email,
             monitor_listing_count=rule.monitor_listing_count,
@@ -140,6 +143,7 @@ async def get_monitoring_rule(rule_id: str):
         if rule.id == rule_id:
             return MonitoringRuleResponse(
                 id=rule.id,
+                rule_name=rule.rule_name,
                 keyword=extract_keywords_from_configs(rule.scraper_configs),
                 user_email=rule.user_email,
                 monitor_listing_count=rule.monitor_listing_count,
@@ -195,7 +199,7 @@ async def get_notifications(user_email: Optional[str] = None):
             notification_type=notification['notification_type'],
             message=notification['message'],
             created_at=notification['created_at'],
-            keyword=notification['keyword'],
+            keyword=notification.get('rule_name', 'Unknown'),  # Use rule_name as keyword
             user_email=notification['user_email']
         )
         for notification in notifications
@@ -214,6 +218,37 @@ async def run_monitoring():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.post("/test-scrape")
+async def test_scrape(request: dict):
+    """Test scraping with custom parameters"""
+    try:
+        monitor = EtsyMonitor()
+        
+        # Extract parameters from request
+        scraper_id = request.get("scraper_id", "search")
+        params = request.get("params", {})
+        
+        # Test the scraper (now async)
+        result = await monitor.test_scraper(scraper_id, params)
+        
+        return {
+            "success": True,
+            "result": result,
+            "message": f"Test scrape completed for {scraper_id}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Test scrape failed: {str(e)}")
+
+@app.get("/scrapers")
+async def get_scrapers():
+    """Get list of available scrapers"""
+    try:
+        monitor = EtsyMonitor()
+        scrapers = monitor.get_available_scrapers()
+        return scrapers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get scrapers: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

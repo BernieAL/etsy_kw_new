@@ -42,9 +42,7 @@ class EtsyMonitor:
     
     def _register_default_scrapers(self):
         """Register all available scrapers with the orchestrator"""
-        self.orchestrator.register_scraper(EtsySearchScraper())
-        self.orchestrator.register_scraper(EtsyStoreScraper())
-        print("Registered default scrapers:", [s.scraper_id for s in self.orchestrator.scrapers.values()])
+        self.orchestrator.register_default_scrapers()
     
     def init_database(self):
         """Initialize SQLite database with required tables"""
@@ -302,7 +300,7 @@ class EtsyMonitor:
         conn.commit()
         conn.close()
     
-    def process_monitoring_rule(self, rule: MonitoringRule) -> List[tuple]:
+    async def process_monitoring_rule(self, rule: MonitoringRule) -> List[tuple]:
         """Process a monitoring rule with multiple scrapers"""
         notifications = []
         
@@ -317,8 +315,8 @@ class EtsyMonitor:
                 priority=config.get("priority", 1)
             )
         
-        # Execute all scrapers sequentially
-        results = self.orchestrator.execute_jobs()
+        # Execute all scrapers sequentially (now async)
+        results = await self.orchestrator.execute_jobs()
         
         # Create ScrapedData object
         scraped_data = ScrapedData(
@@ -388,9 +386,9 @@ class EtsyMonitor:
         """Get list of all available scrapers"""
         return self.orchestrator.get_available_scrapers()
     
-    def test_scraper(self, scraper_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_scraper(self, scraper_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Test a specific scraper with given parameters"""
-        return self.orchestrator.test_scraper(scraper_id, params)
+        return await self.orchestrator.test_scraper(scraper_id, params)
 
 # Example usage
 if __name__ == "__main__":

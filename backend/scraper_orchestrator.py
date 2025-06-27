@@ -3,6 +3,9 @@ from scraper_base import BaseScraper
 import time
 from datetime import datetime
 import logging
+from scrapers.etsy_search_scraper import EtsySearchScraper
+from scrapers.etsy_store_scraper import EtsyStoreScraper
+from scrapers.proxy_test_scraper import ProxyTestScraper
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -59,7 +62,7 @@ class ScraperOrchestrator:
             "available_scrapers": list(self.scrapers.keys())
         }
     
-    def execute_jobs(self, clear_queue: bool = True) -> List[Dict[str, Any]]:
+    async def execute_jobs(self, clear_queue: bool = True) -> List[Dict[str, Any]]:
         """Execute all jobs in the queue sequentially"""
         if not self.scraper_queue:
             logger.info("No jobs in queue to execute")
@@ -101,8 +104,8 @@ class ScraperOrchestrator:
                 # Pre-scrape hook
                 scraper.pre_scrape_hook(job["params"])
                 
-                # Execute scraping
-                result = scraper.scrape(job["params"])
+                # Execute scraping (now async)
+                result = await scraper.scrape(job["params"])
                 
                 # Post-scrape hook
                 scraper.post_scrape_hook(result)
@@ -164,7 +167,7 @@ class ScraperOrchestrator:
         """Get recent execution history"""
         return self.execution_history[-limit:] if self.execution_history else []
     
-    def test_scraper(self, scraper_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_scraper(self, scraper_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Test a specific scraper with given parameters"""
         if scraper_id not in self.scrapers:
             return {"error": f"Scraper {scraper_id} not found"}
@@ -175,9 +178,22 @@ class ScraperOrchestrator:
             if not scraper.validate_params(params):
                 return {"error": "Invalid parameters"}
             
-            result = scraper.scrape(params)
+            result = await scraper.scrape(params)
             result["success"] = True
             return result
             
         except Exception as e:
-            return scraper.handle_error(e, params) 
+            return scraper.handle_error(e, params)
+    
+    def register_default_scrapers(self):
+        """Register the default scrapers"""
+        scrapers = [
+            EtsySearchScraper(),
+            EtsyStoreScraper(),
+            ProxyTestScraper()
+        ]
+        
+        for scraper in scrapers:
+            self.register_scraper(scraper)
+        
+        print(f"Registered default scrapers: {list(self.scrapers.keys())}") 

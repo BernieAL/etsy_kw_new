@@ -10,7 +10,7 @@ class BaseScraper(ABC):
         self.name = name
     
     @abstractmethod
-    def scrape(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def scrape(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Main scraping method - must be implemented by each scraper"""
         pass
     

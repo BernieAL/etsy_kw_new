@@ -9,8 +9,9 @@ export interface ApiResponse<T> {
 export interface MonitoringRule {
   id: string;
   rule_name: string;
+  keyword: string;
   user_email: string;
-  scraper_configs: ScraperConfig[];
+  scraper_configs?: ScraperConfig[];
   schedule_interval?: string;
   monitor_listing_count: boolean;
   monitor_sellers: string[];

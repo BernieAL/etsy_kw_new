@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   ChartBarIcon, 
   BellIcon, 
   ClockIcon, 
-  CheckCircleIcon 
+  CheckCircleIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { monitoringRulesApi, notificationsApi, monitoringApi } from '../services/api';
+import { useState } from 'react';
 
 const stats = [
   { name: 'Total Rules', icon: ChartBarIcon, color: 'bg-blue-500' },
@@ -15,6 +18,14 @@ const stats = [
 ];
 
 export function Dashboard() {
+  const navigate = useNavigate();
+  const [proxyConfig, setProxyConfig] = useState({
+    host: '',
+    port: '',
+    user: '',
+    pass: ''
+  });
+  
   // Fetch monitoring rules
   const { data: rules = [], isLoading: rulesLoading } = useQuery({
     queryKey: ['monitoring-rules'],
@@ -30,14 +41,94 @@ export function Dashboard() {
   const activeRules = rules.filter(rule => rule.is_active);
   const recentNotifications = notifications.slice(0, 5);
 
+  const handleViewAllRules = () => {
+    navigate('/rules');
+  };
+
+  const handleNewRule = () => {
+    navigate('/rules?tab=create');
+  };
+
+  const handleRunMonitoring = async () => {
+    try {
+      await monitoringApi.runMonitoring();
+      // Optionally refresh the data after running monitoring
+      // You could invalidate queries here if needed
+    } catch (error) {
+      console.error('Failed to run monitoring:', error);
+    }
+  };
+
+  const handleTestScrape = async () => {
+    try {
+      const result = await testScrape({
+        scraper_id: "search",
+        params: {
+          keyword: "silver ring",
+          max_listings: 5
+        }
+      });
+
+      if (result.success) {
+        const proxyInfo = result.result.proxy_used ? " (with proxy)" : "";
+        const dataInfo = result.result.data_optimized ? " (data optimized)" : "";
+        const listingsCount = result.result.listings ? result.result.listings.length : 0;
+        const totalResults = result.result.total_results || 0;
+        
+        if (listingsCount === 0) {
+          alert(`Test scrape completed but no listings found.${proxyInfo}${dataInfo}\n\nThis could mean:\n• Etsy is blocking the request\n• The page structure has changed\n• A proxy is needed\n\nCheck the backend logs for more details.`);
+        } else {
+          alert(`Test scrape successful!${proxyInfo}${dataInfo}\n\nKeyword: ${result.result.keyword}\nTotal Results: ${totalResults}\nListings Found: ${listingsCount}\n\nCheck the backend logs for more details.`);
+        }
+      } else {
+        const errorMsg = result.detail || result.result?.error || 'Unknown error';
+        alert(`Test scrape failed: ${errorMsg}\n\nThis could be due to:\n• Etsy blocking the request\n• Network issues\n• Invalid parameters\n\nCheck the backend logs for more details.`);
+      }
+    } catch (error) {
+      console.error('Test scrape failed:', error);
+      alert('Test scrape failed. Check the console for details.');
+    }
+  };
+
+  const handleTestProxy = async () => {
+    try {
+      const result = await testScrape({
+        scraper_id: "proxy_test",
+        params: {}
+      });
+
+      if (result.success) {
+        const proxyInfo = result.result.proxy_used ? " (with proxy)" : " (NO PROXY)";
+        const ipDetection = result.result.ip_detection || "Unknown";
+        
+        alert(`Proxy test completed!${proxyInfo}\n\nIP Detection: ${ipDetection}\nProxy Host: ${result.result.proxy_host}\nProxy Port: ${result.result.proxy_port}\n\nCheck the backend logs for detailed bot detection results.`);
+      } else {
+        const errorMsg = result.detail || result.result?.error || 'Unknown error';
+        alert(`Proxy test failed: ${errorMsg}\n\nCheck the backend logs for more details.`);
+      }
+    } catch (error) {
+      console.error('Proxy test failed:', error);
+      alert('Proxy test failed. Check the console for details.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Overview of your Etsy monitoring activity
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Overview of your Etsy monitoring activity
+          </p>
+        </div>
+        <button
+          onClick={handleNewRule}
+          className="btn-primary flex items-center gap-x-2"
+        >
+          <PlusIcon className="h-4 w-4" />
+          New Rule
+        </button>
       </div>
 
       {/* Stats grid */}
@@ -118,7 +209,7 @@ export function Dashboard() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{rule.rule_name}</p>
                     <p className="text-xs text-gray-500">
-                      {rule.scraper_configs.map(config => config.params.keyword).join(', ')}
+                      {rule.keyword || 'N/A'}
                     </p>
                   </div>
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -166,12 +257,27 @@ export function Dashboard() {
         <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
         <div className="flex space-x-4">
           <button
-            onClick={() => monitoringApi.runMonitoring()}
+            onClick={handleRunMonitoring}
             className="btn-primary"
           >
             Run Monitoring
           </button>
-          <button className="btn-secondary">
+          <button 
+            onClick={handleTestScrape}
+            className="btn-secondary"
+          >
+            Test Scrape
+          </button>
+          <button 
+            onClick={handleTestProxy}
+            className="btn-secondary"
+          >
+            Test Proxy
+          </button>
+          <button 
+            onClick={handleViewAllRules}
+            className="btn-secondary"
+          >
             View All Rules
           </button>
         </div>

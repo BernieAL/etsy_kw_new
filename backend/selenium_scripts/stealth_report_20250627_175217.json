@@ -1,0 +1,101 @@
+[
+  {
+    "site": "Bot Detection (bot.sannysoft.com)",
+    "timestamp": "2025-06-27T17:51:08.913776",
+    "successes": [
+      "WebDriver test: PASSED",
+      "Chrome test: PASSED",
+      "Languages test: PASSED",
+      "Plugins test: PASSED"
+    ],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "headless_detected: 'headless' found in page",
+      "bot_detected: 'bot' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "fingerprint_detected: 'canvas' found in page",
+      "fingerprint_detected: 'webgl' found in page",
+      "proxy_detected: 'tor' found in page",
+      "Some bot detection tests failed"
+    ],
+    "exposures": [
+      "Google WebGL vendor detected (should be Intel/AMD)",
+      "SwiftShader renderer detected (should be Intel/AMD)"
+    ],
+    "page_title": "Antibot",
+    "current_url": "https://bot.sannysoft.com/"
+  },
+  {
+    "site": "Headless Detection (intoli.com)",
+    "timestamp": "2025-06-27T17:51:27.667647",
+    "successes": [],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "webdriver_detected: 'automation' found in page",
+      "headless_detected: 'headless' found in page",
+      "bot_detected: 'bot' found in page",
+      "bot_detected: 'automated' found in page",
+      "bot_detected: 'scraper' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "proxy_detected: 'tor' found in page"
+    ],
+    "exposures": [
+      "Headless detection: EXPOSED (detected as headless)"
+    ],
+    "page_title": "It is *not* possible to detect and block Chrome headless",
+    "current_url": "https://intoli.com/blog/not-possible-to-block-chrome-headless/"
+  },
+  {
+    "site": "Modern Bot Detection (botd.io)",
+    "timestamp": "2025-06-27T17:51:29.453477",
+    "error": "Message: unknown error: net::ERR_TUNNEL_CONNECTION_FAILED\n  (Session info: chrome=138.0.7204.49)\nStacktrace:\n#0 0x5abfdbc3526a <unknown>\n#1 0x5abfdb6dfab0 <unknown>\n#2 0x5abfdb6d6ca1 <unknown>\n#3 0x5abfdb6c7f99 <unknown>\n#4 0x5abfdb6c9ce0 <unknown>\n#5 0x5abfdb6c833e <unknown>\n#6 0x5abfdb6c7caf <unknown>\n#7 0x5abfdb6c7985 <unknown>\n#8 0x5abfdb6c57de <unknown>\n#9 0x5abfdb6c5fca <unknown>\n#10 0x5abfdb6e2fd9 <unknown>\n#11 0x5abfdb77dbb5 <unknown>\n#12 0x5abfdb7571a2 <unknown>\n#13 0x5abfdb77cfee <unknown>\n#14 0x5abfdb756f73 <unknown>\n#15 0x5abfdb723aeb <unknown>\n#16 0x5abfdb724751 <unknown>\n#17 0x5abfdbbf9b7b <unknown>\n#18 0x5abfdbbfd959 <unknown>\n#19 0x5abfdbbe0959 <unknown>\n#20 0x5abfdbbfe518 <unknown>\n#21 0x5abfdbbc510f <unknown>\n#22 0x5abfdbc22918 <unknown>\n#23 0x5abfdbc22af6 <unknown>\n#24 0x5abfdbc34586 <unknown>\n#25 0x7625f35361f5 <unknown>\n",
+    "successes": [],
+    "concerns": [],
+    "exposures": []
+  },
+  {
+    "site": "Browser Fingerprinting (amiunique.org)",
+    "timestamp": "2025-06-27T17:52:04.795366",
+    "successes": [
+      "Browser fingerprint appears common"
+    ],
+    "concerns": [
+      "webdriver_detected: 'webdriver' found in page",
+      "webdriver_detected: 'selenium' found in page",
+      "bot_detected: 'bot' found in page",
+      "fingerprint_detected: 'fingerprint' found in page",
+      "fingerprint_detected: 'canvas' found in page",
+      "fingerprint_detected: 'webgl' found in page",
+      "proxy_detected: 'proxy' found in page",
+      "proxy_detected: 'tor' found in page",
+      "Browser fingerprint may be unique"
+    ],
+    "exposures": [],
+    "page_title": "Am I Unique ?",
+    "current_url": "https://amiunique.org/"
+  },
+  {
+    "site": "Headers Analysis (httpbin.org/headers)",
+    "timestamp": "2025-06-27T17:52:11.146890",
+    "successes": [
+      "Headers are being sent correctly"
+    ],
+    "concerns": [],
+    "exposures": [],
+    "page_title": "",
+    "current_url": "https://httpbin.org/headers"
+  },
+  {
+    "site": "IP Analysis (httpbin.org/ip)",
+    "timestamp": "2025-06-27T17:52:17.924028",
+    "successes": [
+      "IP address is visible"
+    ],
+    "concerns": [],
+    "exposures": [],
+    "page_title": "",
+    "current_url": "https://httpbin.org/ip"
+  }
+]
